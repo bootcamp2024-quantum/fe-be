@@ -1,0 +1,6 @@
+[submodule "core-frontend"]
+	path = core-frontend
+	url = https://github.com/bootcamp2024-quantum/core-frontend.git
+[submodule "core-backend"]
+	path = core-backend
+	url = https://github.com/bootcamp2024-quantum/core-backend.git

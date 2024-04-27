@@ -1,64 +1,29 @@
 services:
-  nginx-proxy:
-    image: jwilder/nginx-proxy
-    container_name: nginx-proxy
+  webserver:
+    image: nginx:1.25.1
+    container_name: webserver
+    build:
+      context: ./
+      dockerfile: ./webserver/Dockerfile
+    environment:
+      SERVER_PORT: ${SERVER_PORT}
+      PORT: ${PORT}
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - webserver:/etc/nginx/conf.d
-#      - vhost:/etc/nginx/vhost.d
-#      - html:/usr/share/nginx/html
-#      - dhparam:/etc/nginx/dhparam
-#      - certs:/etc/nginx/certs:ro
-#      - /var/run/docker.sock:/tmp/docker.sock:ro
-    restart: always
-
-  letsencrypt:
-    image: jrcs/letsencrypt-nginx-proxy-companion
-    container_name: nginx-proxy-le
+      - ./webserver/nginx.conf:/etc/nginx/nginx.conf
+      - ./webserver/default.conf.template:/etc/nginx/templates/default.conf.template
     depends_on:
-      - nginx-proxy
-    volumes:
-      - vhost:/etc/nginx/vhost.d
-      - html:/usr/share/nginx/html
-      - dhparam:/etc/nginx/dhparam:ro
-      - certs:/etc/nginx/certs
-      - acme:/etc/acme.sh
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    environment:
-      - NGINX_PROXY_CONTAINER=nginx-proxy
-    restart: always
+      - backend
+    networks:
+      - febe
+    restart: on-failure
 
-#  sonarqube:
-#    image: sonarqube:developer
-#    hostname: sq.bridgewise.com
-#    container_name: sonarqube
-#    depends_on:
-#      - db
-#    volumes:
-#      - ./sonarqube/data:/opt/sonarqube/data
-#      - ./sonarqube/extensions:/opt/sonarqube/extensions
-#      - ./sonarqube/logs:/opt/sonarqube/logs
-#    expose:
-#      - 9000
-
-  frontend-service:
-    container_name: frontend-service
+  backend:
+    container_name: backend
     build:
-      context: core-frontend
-    ports:
-      - "${PORT}:${PORT}"
-    environment:
-      CHOKIDAR_USEPOLLING: ${CHOKIDAR_USEPOLLING}
-      URL: ${URL}
-      VITE_BACKEND_URL: ${VITE_BACKEND_URL}
-      PORT: ${PORT}
-
-  backend-service:
-    container_name: backend-service
-    build:
-      context: ./core-backend
+      context: core-backend
       target: base
       args:
         DJANGO_ENV: development
@@ -73,68 +38,31 @@ services:
       DB_HOST: ${DB_HOST}
       DB_PORT: ${DB_PORT}
       DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
-    command: [ "python", "-Wd", "manage.py", "runserver", "0.0.0.0:${SERVER_PORT}" ]
-    ports:
-      - "${SERVER_PORT}:${SERVER_PORT}"
     volumes:
       - ./media:/usr/src/app/media
+    command: /bin/bash -c "exec invoke run-prod"
     depends_on:
       db:
         condition: service_healthy
+    networks:
+      - febe
 
   db:
-    container_name: postgresql
-    image: postgres:15
-    hostname: postgresql
+    container_name: db
+    image: postgres:15.6
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - postgresql:/var/lib/postgresql
-      - postgresql_data:/var/lib/postgresql/data
-    ports:
-      - "${DB_PORT}:${DB_PORT}"
+      - /home/ubuntu/db:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} || exit 1" ]
       interval: 5s
       timeout: 3s
       retries: 3
+    networks:
+      - febe
 
-  db-initializer:
-    container_name: db_initializer
-    build:
-      context: ./core-backend
-      target: base
-      args:
-        DJANGO_ENV: development
-    links:
-      - db
-    depends_on:
-      db:
-        condition: service_healthy
-    environment:
-      SECRET_KEY: ${SECRET_KEY}
-      SERVER_PORT: ${SERVER_PORT}
-      DJANGO_CORS_ALLOWED_ORIGINS: ${DJANGO_CORS_ALLOWED_ORIGINS}
-      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-      DB_HOST: ${DB_HOST}
-      DB_PORT: ${DB_PORT}
-      DJANGO_SETTINGS_MODULE: ${DJANGO_SETTINGS_MODULE}
-#    tty: true
-#    entrypoint: ["tail"]
-#    command: ["-f","/dev/null"]
-    command: /bin/bash -c "exec invoke init-db"
-
-volumes:
-  conf:
-  vhost:
-  html:
-  dhparam:
-  certs:
-  acme:
-  postgresql:
-  postgresql_data:
+networks:
+  febe:

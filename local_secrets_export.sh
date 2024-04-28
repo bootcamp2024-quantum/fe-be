@@ -15,8 +15,8 @@ export_secrets() {
     export DJANGO_SETTINGS_MODULE="career_skill_atlas.config.base_settings"
     export CHOKIDAR_USEPOLLING="false"
     export URL="http://localhost"
-    export VITE_BACKEND_URL="http://localhost:9000/api"
-    export PORT="3000"
+    export VITE_BACKEND_URL="http://localhost:80/api"
+    export PORT="7777"
 }
 
 # Call the function to export the secrets

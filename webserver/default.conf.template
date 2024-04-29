@@ -2,10 +2,23 @@ upstream backend {
     server backend:9000;
 }
 
-
 server {
     listen 80;
-    server_name  localhost;
+    server_name skills.quantumobile.com;
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl;
+    server_name  skills.quantumobile.com;
+
+    # To renew cert
+    # docker run -it --network host --rm --name certbot -v "/etc/letsencrypt:/etc/letsencrypt" -v "/var/lib/letsencrypt:/var/lib/letsencrypt" certbot/certbot certonly
+    ssl_certificate /etc/letsencrypt/live/skills.quantumobile.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/skills.quantumobile.com/privkey.pem;
 
     gzip on;
     gzip_types      text/plain application/xml application/javascript;

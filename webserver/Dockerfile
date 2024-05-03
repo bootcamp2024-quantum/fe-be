@@ -1,6 +1,6 @@
 FROM node:20-alpine AS builder
 
-ENV VITE_BACKEND_URL="http://localhost:80/api"
+ENV VITE_BACKEND_URL=$VITE_BACKEND_URL
 
 WORKDIR /code
 COPY ./core-frontend /code

@@ -39,6 +39,10 @@ server {
         uwsgi_pass  backend;
         include     /etc/nginx/uwsgi_params;
     }
+    location /internal {
+        uwsgi_pass  backend;
+        include     /etc/nginx/uwsgi_params;
+    }
     location /static {
         root   /usr/share/nginx/html;
         try_files $uri @static;
